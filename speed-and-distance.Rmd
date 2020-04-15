@@ -250,7 +250,7 @@ pca_results$rotation
 
 
 
-  1. Here we construct a scree plot.
+  a. Here we construct a scree plot.
     
 ```{r}
 # Scree plot: % of variance explained by each principal component
@@ -264,7 +264,7 @@ plot(get_eig(pca_results)$cumulative.variance.percent)
 get_eig(pca_results)
 ```
     
-  2. We construct a score plot. 
+  b. We construct a score plot. 
     
   Chocolate peanut better is in top left. Chocolate is bottom left. More fruity is top right and more hard and fruity is bottom right. 
     
@@ -273,7 +273,7 @@ get_eig(pca_results)
 fviz_pca_ind(pca_results, repel = TRUE)
 ```
 
-  3. We construct a **loadings plot**
+  c. We construct a **loadings plot**
     
   Chocolate and peanuty alomndy seem to highly correlated. Caramel and nougat are seem to be positively correlated. 
 
@@ -331,11 +331,11 @@ summary(pcr_model)
 head(candy_cluster)
 ```
     
-  1. Here we are trying to identify the optimal number of PCs to utilize in your model.  
+  a. Here we are trying to identify the optimal number of PCs to utilize in your model.  
   Looking at the MAE graph we see that MAE is relatively low for 4 componenets and even lower for 10 componenets. We still might want to use 4 components instead of 10 to make sure we are not we are not overfitting. 
 
     
-  2. We repeat our analysis using LASSO.
+  b. We repeat our analysis using LASSO.
     
 ```{r}
 set.seed(253)
