@@ -1,28 +1,363 @@
 ---
 title: "Clustering Similar Candies"
-output: html_document
+author: "Venkat Somala"
+knit: (function(input_file, encoding) {
+  out_dir <- 'docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r}
+library(ggplot2)  # for plots
+library(dplyr)    # for wrangling
+library(caret)    # for machine learning algorithms
+
 ```
 
-## R Markdown
+```{r}
+    library(fivethirtyeight)
+    data(candy_rankings)
+    head(candy_rankings)
+    ```
+    
+    (@) **Process and get to know the data**    
+    Here we are determining which of the variables in the dataset might be an identifying variable.  
+    
+```{r}
+library(tree)
+candy_cluster <- hclust(dist(candy_rankings), method = "complete")
+plot(candy_cluster)
+```
+    
+    Research Question
+    
+    
+What characterisitcs the most likeable candies share between each other. Maybe the caramel the candy, the more popular it is. 
+    
+    Now, we check out the scales of your features and we sacle these variables when we eventually conduct a hierarhical algorithm so that it converts all the variable values into the same scale, which makes it easier to compare and interpret.  Explain why it makes sense to *scale* these variables when you eventually conduct a hierarchical algorithm.    
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r}
+library(tibble)
+candy_cluster <- candy_rankings %>% 
+  column_to_rownames("competitorname")
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+hier_model <- hclust(dist(scale(candy_cluster)), method = "complete")
 
-```{r cars}
-summary(cars)
+
 ```
 
-## Including Plots
+\
+\
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
+(@) **Visualizing structure - Heat Map of Scaled Dataset**    
+
+```{r}
+heatmap(data.matrix(scale(candy_cluster)), Colv = NA, Rowv = NA)
+
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+    Dendrogram of scaled dataset using complete linkage method.
+    
+```{r}
+plot(hier_model, cex=0.8)
+
+```
+
+
+
+
+\
+\
+
+
+
+(@)  **Defining & making meaning from clusters**        
+
+    
+```{r}
+cluster_4 <- as.factor(cutree(hier_model, k = 4))
+plot(cluster_4)
+
+cluster_6 <- as.factor(cutree(hier_model, k=6))
+plot(cluster_6)
+
+```
+    
+
+
+
+(@)  **Sensitivity analysis**    
+    The hierarchical cluster analysis above utilized the **complete linkage** strategy to fuse branches.  That is, we measured the distance between two branches by the *maximum* distance between any case in branch one and any case in branch two.  This is merely one strategy. Consider 3 other strategies below.    
+    1. Construct a dendrogram using the **single linkage** approach.  
+    
+    Single finds the minimum distances between clusters whereas complete finds the maximum distance. THis one is a lot lower height is can be reduced to fewer clusters.
+    
+```{r}
+hier_model_single <- hclust(dist(scale(candy_cluster)), method = "single")
+plot(hier_model_single, cex=0.8)
+
+
+```
+    2. Construct a dendrogram using the **centroid linkage** approach. 
+    
+    Centroid linkage finds the centroid of each cluster and calculate the distance between centroids of two clusters. This one has more clusters and is more scattered. one side is a lot more dense than the other in the original split. 
+    
+    
+```{r}
+
+hier_model_center <- hclust(dist(scale(candy_cluster)), method = "centroid")
+plot(hier_model_center, cex=0.8)
+```
+  
+    3. Construct a dendrogram using the **average linkage** approach.
+    
+    The average linkage finds all possible pair distances for points belonging to two different clusters and then calculates the average. This one is also lob sided but we can cut of the number of clusters at a smaller cluster number.
+    
+```{r}
+hier_model_average <- hclust(dist(scale(candy_cluster)), method = "average")
+plot(hier_model_average, cex=0.8)
+
+```
+   
+    d. What type of linkage is most reasonable for your analysis? Justify your choice based on the data context and your scientific goals.    
+    
+    
+Complete linkage seems like the best type of linkage for this I would use the complete because it produces an even dendrogram that has a relatively small amount of clusters.
+
+
+
+
+
+(@) **Choosing K**    
+Now let's try the K-means approach.  The first step is to **pick K**.  So how do we choose?    
+    1. Run and store a K-means algorithm using K = 2.    
+    
+```{r}
+library(caret)
+library(fivethirtyeight)
+data(candy_rankings)
+head(candy_rankings)
+library(tree)
+candy_cluster <- hclust(dist(candy_rankings), method = "complete")
+library(tibble)
+candy_cluster <- candy_rankings %>% 
+  column_to_rownames("competitorname")
+
+hier_model <- hclust(dist(scale(candy_cluster)), method = "complete")
+
+```
+
+
+```{r}
+set.seed(253)
+kmeans_model <- kmeans(scale(candy_cluster), centers = 3)
+kmeans_model_2 <- kmeans(scale(candy_cluster), centers = 6)
+SS <- rep(0, 2)
+for(i in 1:2){
+  SS[i] <- kmeans(scale(candy_cluster), centers = i)$tot.withinss  
+}
+tune_data <- data.frame(K = 1:2, SS)
+
+as.factor(kmeans_model$cluster)
+
+
+```
+    
+    2. One strategy for evaluating and comparing K is to calculate the total squared distance of each case from its assigned centroid (the `total within- cluster sum of squares`).      
+
+```{r}
+
+kmeans_model$tot.withinss
+```
+
+
+    3. Next, we calculate the total sum of squared distances for each K in $\{1, 2, ..., n\}$ where we pick a reasonable $n$. 
+```{r}
+tune_data <- data.frame(K = 1:2, SS)
+tune_data
+
+```
+    
+    d. Based on this plot, which values of K seem reasonable? Explain.
+    
+    Based on the plot, the best value of K seems to be 2 since it is a lower sum of squared distances.
+
+
+(@) **A final K-means model**    
+    We run the K-means algorithm using the K we identified earlier.  Store the cluster labels in your data set.     
+    
+```{r}
+SS_2 <- rep(0, 18)
+for(i in 1:18){
+  SS_2[i] <- kmeans(scale(candy_cluster), centers = i)$tot.withinss  
+}
+tune_data_2 <- data.frame(K = 1:18, SS_2)
+
+candy_cluster %>% mutate(as.factor(kmeans_model$cluster))
+tune_data_2
+
+```
+
+    To get a sense for how some of the features might have played into the clustering, calculate the mean of each feature within each cluster.    
+
+```{r}
+  kmeans_model_2$withinss
+head(candy_cluster)
+```
+
+\
+\
+
+
+
+    
+(@) **Final reflection**    
+
+        My final cluster is 5 clusters. After five the sum of squared distances decreases relatively little with each new cluster split added. There are few clusters that could be characterized as being caramel, chocolate, fruity, peanutyalmondy, and nougat.
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+8.  **Principal components analysis**    
+     We have quite a few features in your dataset.  We can perform a useful dimension reducation via PCA.    
+        
+```{r}
+candy_nowin <- candy_cluster %>% select(-"winpercent")
+
+# Compute PCA
+pca_results <- prcomp(candy_nowin, scale = TRUE)
+
+# Loadings (ie. definition of PCs)
+pca_results$rotation
+```
+
+
+
+
+    1. Here we construct a scree plot.
+    
+    ```{r}
+    # Scree plot: % of variance explained by each principal component
+    library(factoextra)
+    fviz_eig(pca_results)
+    
+    # Plot cumulative % of variance explained
+    plot(get_eig(pca_results)$cumulative.variance.percent)
+    
+    # Numerical examination
+    get_eig(pca_results)
+    ```
+    
+    2. We construct a score plot. 
+    
+    Chocolate peanut better is in top left. Chocolate is bottom left. More fruity is top right and more hard and fruity is bottom right. 
+    
+```{r}
+# Score plot: plot PC1 scores vs PC2 scores
+fviz_pca_ind(pca_results, repel = TRUE)
+```
+
+    3. We construct a **loadings plot**
+    
+    Chocolate and peanuty alomndy seem to highly correlated. Caramel and nougat are seem to be positively correlated. 
+    
+```{r eval = FALSE}
+# Loadings plot
+fviz_pca_var(pca_results, repel = TRUE)
+```
+
+    e. Based on the loadings plot, these seem to be split up very similar to how we saw it in the prevous plot with the four quardrants having similar themes as the last graph. 
+
+
+
+9. **Principal components regression**    
+    In this exercise we will perform principal components regression for $y$. 
+  
+        
+```{r}
+library(caret)
+library(fivethirtyeight)
+data(candy_rankings)
+head(candy_rankings)
+library(tree)
+candy_cluster <- hclust(dist(candy_rankings), method = "complete")
+library(tibble)
+candy_cluster <- candy_rankings %>% 
+  column_to_rownames("competitorname")
+
+hier_model <- hclust(dist(scale(candy_cluster)), method = "complete")
+
+
+# Set the seed
+set.seed(253)
+
+# Run the algorithm
+pcr_model <- train(
+  winpercent ~ ., 
+  data = candy_cluster, 
+  method = "pcr",
+  scale = TRUE,
+  tuneGrid = data.frame(ncomp = 1:5),  # number of PCs to keep as predictors
+  trControl = trainControl("cv", number = 10, selectionFunction = "oneSE"),
+  metric = "MAE"
+)
+
+# CV metrics by number of PCs
+plot(pcr_model)
+pcr_model$results
+
+# Variation in original predictors explained by each PC
+summary(pcr_model)
+```
+    
+```{r}
+
+head(candy_cluster)
+```
+    
+    1. Here we are trying to identify the optimal number of PCs to utilize in your model.  
+    Looking at the MAE graph we see that MAE is relatively low for 4 componenets and even lower for 10 componenets. We still might want to use 4 components instead of 10 to make sure we are not we are not overfitting, 
+
+    
+    2. We repeat our analysis using LASSO.
+    
+```{r}
+set.seed(253)
+lambda_grid <- seq(0, 1, length = 100)
+
+
+lasso_model_2 <- train(
+    winpercent ~ .,
+    data = candy_cluster,
+    method = "glmnet",
+    tuneGrid = data.frame(alpha = 1, lambda = lambda_grid),
+    trControl = trainControl(method = "cv", number = 10, selectionFunction = "best"),
+    metric = "MAE",
+    na.action = na.omit
+)
+
+coef(lasso_model_2$finalModel, lasso_model_2$bestTune$lambda) #oneSE
+lasso_model_2$bestTune$lambda
+plot(lasso_model_2)
+```
+    
+    In the optimally tuned LASSO model, there are 8 predictors. 
+    
+    c. We report the 10-fold CV MAE for the optimally tuned LASSO model.  
+
+```{r}
+lasso_model_2$resample
+```
+
+   From the results above, I would use the LASSO model because it has a lower MAE. The optimal MAE is around 6.9 whereas it was 9.55 using the prinicpal components model.
+    
