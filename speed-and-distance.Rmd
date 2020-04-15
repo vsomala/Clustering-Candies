@@ -92,7 +92,8 @@ plot(cluster_6)
 
 (@)  **Sensitivity analysis**    
     The hierarchical cluster analysis above utilized the **complete linkage** strategy to fuse branches.  That is, we measured the distance between two branches by the *maximum* distance between any case in branch one and any case in branch two.  This is merely one strategy. Consider 3 other strategies below.    
-    1. Construct a dendrogram using the **single linkage** approach.  
+    
+a. Construct a dendrogram using the **single linkage** approach.  
     
     Single finds the minimum distances between clusters whereas complete finds the maximum distance. THis one is a lot lower height is can be reduced to fewer clusters.
     
@@ -105,7 +106,7 @@ plot(hier_model_single, cex=0.8)
 
 
 
-(2)  **Centroid linkage**    
+(b)  **Centroid linkage**    
 
     Centroid linkage finds the centroid of each cluster and calculate the distance between centroids of two clusters. This one has more clusters and is more scattered. one side is a lot more dense than the other in the original split. 
     
@@ -116,7 +117,7 @@ hier_model_center <- hclust(dist(scale(candy_cluster)), method = "centroid")
 plot(hier_model_center, cex=0.8)
 ```
   
-(2)  **Average linkage**    
+(c)  **Average linkage**    
 
     The average linkage finds all possible pair distances for points belonging to two different clusters and then calculates the average. This one is also lob sided but we can cut of the number of clusters at a smaller cluster number.
     
@@ -126,10 +127,9 @@ plot(hier_model_average, cex=0.8)
 
 ```
    
-    d. What type of linkage is most reasonable for your analysis? Justify your choice based on the data context and your scientific goals.    
+
     
-    
-Complete linkage seems like the best type of linkage for this I would use the complete because it produces an even dendrogram that has a relatively small amount of clusters.
+    Complete linkage seems like the best type of linkage for this I would use the complete because it produces an even dendrogram that has a relatively small amount of clusters.
 
 
 
@@ -139,7 +139,7 @@ Complete linkage seems like the best type of linkage for this I would use the co
 
 Now let's try the K-means approach.  The first step is to **pick K**.  So how do we choose? 
 
-   1. Run and store a K-means algorithm using K = 2.    
+   a. Run and store a K-means algorithm using K = 2.    
     
 ```{r}
 library(caret)
@@ -172,7 +172,7 @@ as.factor(kmeans_model$cluster)
 
 ```
     
-  2. One strategy for evaluating and comparing K is to calculate the total squared distance of each case from its assigned centroid (the `total within- cluster sum of squares`).      
+  b. One strategy for evaluating and comparing K is to calculate the total squared distance of each case from its assigned centroid (the `total within- cluster sum of squares`).      
 
 ```{r}
 
@@ -180,7 +180,7 @@ kmeans_model$tot.withinss
 ```
 
 
-  3. Next, we calculate the total sum of squared distances for each K in $\{1, 2, ..., n\}$ where we pick a reasonable $n$. 
+  c. Next, we calculate the total sum of squared distances for each K in $\{1, 2, ..., n\}$ where we pick a reasonable $n$. 
   
 ```{r}
 tune_data <- data.frame(K = 1:2, SS)
